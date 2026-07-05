@@ -1,26 +1,29 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* หอพร้อม warm palette: cream paper, teak wood, marigold accent */
+@theme {
+  --font-sans: var(--font-sarabun), "Sarabun", ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-prompt), "Prompt", var(--font-sarabun), sans-serif;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-cream: #faf5ec;
+  --color-cream-dark: #f1e9db;
+  --color-sand: #e8ddcc;
+  --color-teak-950: #251d13;
+  --color-teak-900: #322818;
+  --color-teak-800: #453728;
+  --color-marigold-100: #fdeed3;
+  --color-marigold-400: #e8a33d;
+  --color-marigold-500: #d98e1f;
+  --color-marigold-700: #a35f0a;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-cream);
+  color: #33291e;
+  font-family: var(--font-sans);
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
 }
