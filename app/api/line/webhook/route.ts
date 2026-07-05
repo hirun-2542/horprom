@@ -47,11 +47,20 @@ function verified(req: NextRequest, body: string): boolean {
 
 const MENU_TEXT =
   "เมนูที่ใช้งานได้ค่ะ\n\n" +
-  "1) ลงทะเบียนห้อง\n" +
-  "พิมพ์: ลงทะเบียน 101 1234\n" +
-  "(1234 = เลขท้ายเบอร์โทร 4 ตัว)\n\n" +
+  "1) ลงทะเบียนห้อง\nพิมพ์: ลงทะเบียน\n(ระบบจะส่งปุ่มเปิดฟอร์มให้)\n\n" +
   "2) ขอใบแจ้งหนี้ล่าสุด\nพิมพ์: บิล\n\n" +
   "3) ดู LINE User ID\nพิมพ์: id";
+
+// Signed registration form link — the page knows the LINE userId from the token,
+// so submitting the form binds/creates the tenant with no owner action needed.
+const registerFlex = (userId: string) =>
+  openPageFlexMessage({
+    title: "ลงทะเบียนรับบิลทาง LINE",
+    detail: "เลือกห้อง กรอกชื่อและเบอร์โทร ระบบจะส่งใบแจ้งหนี้มาที่ LINE นี้",
+    buttonLabel: "เปิดฟอร์มลงทะเบียน",
+    url: `${baseUrl()}/t/register?token=${encodeURIComponent(signPayload(`register|${userId}`, 7))}`,
+    icon: "📝",
+  });
 
 async function handleEvent(ev: LineEvent) {
   const userId = ev.source?.userId ?? "";
@@ -62,13 +71,10 @@ async function handleEvent(ev: LineEvent) {
   await rememberContact(userId).catch((e) => console.error("[line] rememberContact:", e));
 
   if (ev.type === "follow") {
-    await replyText(
-      replyToken,
-      "ขอบคุณที่เพิ่มเพื่อนค่ะ\n\n" +
-        "กรุณาลงทะเบียนห้องของคุณโดยพิมพ์:\n" +
-        "ลงทะเบียน เลขห้อง เลขท้ายเบอร์โทร4หลัก\n\n" +
-        "ตัวอย่าง:\nลงทะเบียน 101 1234"
-    );
+    await replyMessages(replyToken, [
+      { type: "text", text: "ขอบคุณที่เพิ่มเพื่อนค่ะ 🙏\nกดปุ่มด้านล่างเพื่อลงทะเบียนรับใบแจ้งหนี้ทาง LINE" },
+      registerFlex(userId),
+    ]);
     return;
   }
 
@@ -101,11 +107,9 @@ async function handleTextCommand(userId: string, replyToken: string, raw: string
   if (/^(?:บิล|บิลล่าสุด|ใบแจ้งหนี้|invoice)$/i.test(text))
     return replyLatestInvoice(userId, replyToken);
 
+  // "ลงทะเบียน" alone or any malformed variant → send the form button.
   if (/^(?:ลงทะเบียน|register|reg)/i.test(text))
-    return replyText(
-      replyToken,
-      "รูปแบบไม่ถูกต้องค่ะ\n\nพิมพ์: ลงทะเบียน เลขห้อง เลขท้ายเบอร์โทร4หลัก\nตัวอย่าง: ลงทะเบียน 101 1234"
-    );
+    return replyMessages(replyToken, [registerFlex(userId)]);
 
   return replyText(replyToken, MENU_TEXT);
 }
@@ -169,12 +173,7 @@ async function replyLatestInvoice(userId: string, replyToken: string) {
 async function handlePostback(userId: string, replyToken: string, data: string) {
   if (data === "ACTION_ID") return replyText(replyToken, `LINE User ID ของคุณคือ:\n${userId}`);
 
-  if (data === "ACTION_REGISTER")
-    // GAS opened a signed register page; the chat command does the same binding.
-    return replyText(
-      replyToken,
-      "ลงทะเบียนห้องของคุณโดยพิมพ์:\n\nลงทะเบียน เลขห้อง เลขท้ายเบอร์โทร4หลัก\n\nตัวอย่าง:\nลงทะเบียน 101 1234"
-    );
+  if (data === "ACTION_REGISTER") return replyMessages(replyToken, [registerFlex(userId)]);
 
   if (data === "ACTION_LATEST_INVOICE") return replyLatestInvoice(userId, replyToken);
 
