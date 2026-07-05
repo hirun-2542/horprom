@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db";
 import { verifyPayload } from "@/lib/util";
+import { getProfile } from "@/lib/line";
 import { registerLineFromPageAction } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,11 @@ export default async function TenantRegisterPage({
   const token = sp.token ?? "";
   const payload = verifyPayload(token);
   const valid = payload?.startsWith("register|") ?? false;
+  // The token binds the LINE chat the button was sent to — show whose account
+  // that is, so a forwarded/shared link can't silently register the wrong person.
+  const lineName = valid
+    ? (await getProfile(payload!.split("|")[1]).catch(() => ({ displayName: undefined }))).displayName
+    : undefined;
 
   const rooms = valid
     ? await sql()<{ id: number; room_no: string; occupied: boolean }[]>`
@@ -40,6 +46,11 @@ export default async function TenantRegisterPage({
       ) : (
         <form action={registerLineFromPageAction} className="space-y-3 rounded-2xl border border-sand bg-white shadow-sm p-5">
           <input type="hidden" name="token" value={token} />
+          <p className="rounded-lg bg-marigold-100 p-2.5 text-sm text-teak-800">
+            บิลจะถูกส่งไปที่บัญชี LINE: <strong>{lineName ?? "ไม่ทราบชื่อ"}</strong>
+            <br />
+            <span className="text-xs text-stone-500">ถ้าไม่ใช่บัญชีของคุณ ให้กดปุ่ม &quot;ลงทะเบียน&quot; จากแชท LINE ของคุณเองแล้วเปิดลิงก์ใหม่</span>
+          </p>
           {sp.error === "phone" && (
             <p className="rounded-lg bg-red-50 p-2 text-sm text-red-600">
               เบอร์โทรไม่ตรงกับข้อมูลผู้เช่าของห้องนี้ กรุณาติดต่อเจ้าของหอ
